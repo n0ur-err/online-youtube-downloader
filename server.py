@@ -1,11 +1,9 @@
 import os
-import sys
 import json
 import uuid
 import queue
 import threading
 import time
-from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 from downloader import download_video, get_video_info
@@ -17,7 +15,7 @@ DOWNLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downlo
 os.makedirs(DOWNLOADS_DIR, exist_ok=True)
 
 # Active download jobs: job_id -> { status, queue, filename }
-jobs = {}
+jobs: dict = {}
 jobs_lock = threading.Lock()
 
 ALLOWED_HOSTS = ('youtube.com', 'youtu.be', 'www.youtube.com', 'm.youtube.com')
@@ -136,7 +134,6 @@ def progress(job_id):
 
 @app.route('/api/file/<path:filename>')
 def download_file(filename):
-    # Sanitize to prevent path traversal
     safe_name = os.path.basename(filename)
     return send_from_directory(DOWNLOADS_DIR, safe_name, as_attachment=True)
 

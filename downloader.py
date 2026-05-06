@@ -45,7 +45,6 @@ def download_video(url: str, output_path: str, quality: str, progress_queue=None
     os.makedirs(output_path, exist_ok=True)
 
     format_selector = QUALITY_FORMATS.get(quality, QUALITY_FORMATS['best'])
-    result_filename: list[str] = []
 
     def progress_hook(d):
         if d['status'] == 'downloading' and progress_queue is not None:
@@ -63,8 +62,6 @@ def download_video(url: str, output_path: str, quality: str, progress_queue=None
                 'message': f'Downloading… {percent}%',
             })
         elif d['status'] == 'finished':
-            if d.get('filename'):
-                result_filename.append(d['filename'])
             if progress_queue is not None:
                 progress_queue.put({'type': 'progress', 'progress': 95, 'message': 'Processing…'})
 
