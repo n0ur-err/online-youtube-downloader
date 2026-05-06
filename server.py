@@ -6,7 +6,7 @@ import threading
 import time
 from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
-from downloader import download_video, get_video_info
+from downloader import download_video, get_video_info, COOKIES_FILE
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
@@ -136,6 +136,28 @@ def progress(job_id):
 def download_file(filename):
     safe_name = os.path.basename(filename)
     return send_from_directory(DOWNLOADS_DIR, safe_name, as_attachment=True)
+
+
+@app.route('/api/cookies', methods=['POST'])
+def upload_cookies():
+    """Accept a Netscape-format cookies.txt and save it for yt-dlp to use."""
+    if 'cookies' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    f = request.files['cookies']
+    if not f.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+    content = f.read(1024 * 512)  # max 512 KB
+    # Basic sanity check — Netscape cookie files start with a known header
+    if b'HTTP Cookie File' not in content and b'Netscape HTTP' not in content and b'# ' not in content[:50]:
+        return jsonify({'error': 'Does not look like a valid Netscape cookies.txt file'}), 400
+    with open(COOKIES_FILE, 'wb') as out:
+        out.write(content)
+    return jsonify({'ok': True, 'message': 'Cookies saved — downloads will now use them.'})
+
+
+@app.route('/api/cookies/status', methods=['GET'])
+def cookies_status():
+    return jsonify({'has_cookies': os.path.isfile(COOKIES_FILE)})
 
 
 if __name__ == '__main__':

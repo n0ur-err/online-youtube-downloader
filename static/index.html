@@ -57,6 +57,16 @@
     .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     footer { margin-top: auto; padding: 16px; color: var(--muted); font-size: .78rem; text-align: center; }
+    /* cookies section */
+    .cookies-toggle { background: none; border: none; color: var(--muted); font-size: .8rem; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 0; margin-top: 14px; }
+    .cookies-toggle:hover { color: var(--text); }
+    .cookies-body { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: none; }
+    .cookies-body.open { display: block; }
+    .cookies-drop { border: 2px dashed var(--border); border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; transition: border-color .2s; font-size: .85rem; color: var(--muted); }
+    .cookies-drop:hover, .cookies-drop.dragover { border-color: var(--accent); color: var(--accent); }
+    .cookie-status { margin-top: 8px; font-size: .8rem; }
+    .cookie-status.ok { color: var(--success); }
+    .cookie-status.err { color: var(--error); }
   </style>
 </head>
 <body>
@@ -132,6 +142,23 @@
     <div class="error-inner">
       <div style="font-size:1.5rem">⚠️</div>
       <div><strong id="error-title">Error</strong><p id="error-msg">—</p></div>
+    </div>
+  </div>
+
+  <!-- Cookies section -->
+  <div class="card" id="cookies-card">
+    <button class="cookies-toggle" onclick="toggleCookies()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span id="cookies-toggle-label">YouTube cookies (fix bot detection)</span>
+      <span id="cookies-badge" style="display:none; background:var(--success); color:#fff; border-radius:99px; padding:1px 8px; font-size:.75rem;">active</span>
+    </button>
+    <div class="cookies-body" id="cookies-body">
+      <p style="font-size:.82rem; color:var(--muted); margin-bottom:10px;">Upload a <code>cookies.txt</code> exported from your browser while logged into YouTube. This lets the server pass your session to yt-dlp and bypass bot checks.</p>
+      <div class="cookies-drop" id="cookies-drop" onclick="document.getElementById('cookies-file').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleCookieDrop(event)">
+        Click or drag &amp; drop your <strong>cookies.txt</strong> here
+      </div>
+      <input type="file" id="cookies-file" accept=".txt" style="display:none" onchange="uploadCookies(this.files[0])" />
+      <div class="cookie-status" id="cookie-status"></div>
     </div>
   </div>
 </main>
@@ -221,6 +248,51 @@
   }
 
   document.getElementById('url-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') fetchInfo(); });
+
+  // Cookies
+  function toggleCookies() {
+    const body = document.getElementById('cookies-body');
+    body.classList.toggle('open');
+  }
+
+  async function checkCookiesStatus() {
+    try {
+      const res = await fetch('/api/cookies/status');
+      const d = await res.json();
+      const badge = document.getElementById('cookies-badge');
+      if (d.has_cookies) { badge.style.display = 'inline'; }
+      else { badge.style.display = 'none'; }
+    } catch(_) {}
+  }
+
+  function handleCookieDrop(e) {
+    e.preventDefault();
+    document.getElementById('cookies-drop').classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadCookies(file);
+  }
+
+  async function uploadCookies(file) {
+    if (!file) return;
+    const statusEl = document.getElementById('cookie-status');
+    statusEl.className = 'cookie-status';
+    statusEl.textContent = 'Uploading…';
+    const fd = new FormData();
+    fd.append('cookies', file);
+    try {
+      const res = await fetch('/api/cookies', { method: 'POST', body: fd });
+      const d = await res.json();
+      if (!res.ok || d.error) throw new Error(d.error);
+      statusEl.className = 'cookie-status ok';
+      statusEl.textContent = '✓ ' + d.message;
+      document.getElementById('cookies-badge').style.display = 'inline';
+    } catch(e) {
+      statusEl.className = 'cookie-status err';
+      statusEl.textContent = '✗ ' + e.message;
+    }
+  }
+
+  checkCookiesStatus();
 </script>
 </body>
 </html>

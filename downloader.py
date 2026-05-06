@@ -11,6 +11,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _local_ffmpeg = os.path.join(SCRIPT_DIR, 'ffmpeg.exe')
 FFMPEG_LOCATION = SCRIPT_DIR if os.path.isfile(_local_ffmpeg) else None
 
+# Path where an uploaded cookies.txt will be stored
+COOKIES_FILE = os.path.join(SCRIPT_DIR, 'cookies.txt')
+
+# Extractor args to use the iOS client — bypasses bot detection on most servers
+_EXTRACTOR_ARGS = {'youtube': {'player_client': ['ios']}}
+
 QUALITY_FORMATS = {
     'best':  'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best',
     '720p':  'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720][ext=mp4]/best[height<=720]',
@@ -19,13 +25,22 @@ QUALITY_FORMATS = {
 }
 
 
-def get_video_info(url: str) -> dict:
-    """Return metadata for a YouTube URL without downloading."""
-    ydl_opts = {
+def _base_opts() -> dict:
+    """Shared yt-dlp options that help avoid bot detection."""
+    opts: dict = {
         'quiet': True,
         'no_warnings': True,
         'noplaylist': True,
+        'extractor_args': _EXTRACTOR_ARGS,
     }
+    if os.path.isfile(COOKIES_FILE):
+        opts['cookiefile'] = COOKIES_FILE
+    return opts
+
+
+def get_video_info(url: str) -> dict:
+    """Return metadata for a YouTube URL without downloading."""
+    ydl_opts = _base_opts()
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)
     return {
@@ -65,15 +80,13 @@ def download_video(url: str, output_path: str, quality: str, progress_queue=None
             if progress_queue is not None:
                 progress_queue.put({'type': 'progress', 'progress': 95, 'message': 'Processing…'})
 
-    ydl_opts = {
+    ydl_opts = _base_opts()
+    ydl_opts.update({
         'format': format_selector,
         'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4' if quality != 'audio' else None,
-        'quiet': True,
-        'no_warnings': True,
-        'noplaylist': True,
         'progress_hooks': [progress_hook],
-    }
+    })
     if FFMPEG_LOCATION:
         ydl_opts['ffmpeg_location'] = FFMPEG_LOCATION
 
