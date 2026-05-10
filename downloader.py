@@ -14,8 +14,9 @@ FFMPEG_LOCATION = SCRIPT_DIR if os.path.isfile(_local_ffmpeg) else None
 # Path where an uploaded cookies.txt will be stored
 COOKIES_FILE = os.path.join(SCRIPT_DIR, 'cookies.txt')
 
-# Extractor args to use the iOS client — bypasses bot detection on most servers
-_EXTRACTOR_ARGS = {'youtube': {'player_client': ['ios']}}
+# tv_embedded client bypasses YouTube bot-detection on server IPs without requiring cookies.
+# ios and web_creator are tried as fallbacks.
+_EXTRACTOR_ARGS = {'youtube': {'player_client': ['tv_embedded', 'ios', 'web_creator']}}
 
 QUALITY_FORMATS = {
     'best':  'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best',
