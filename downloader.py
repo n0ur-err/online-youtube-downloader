@@ -14,9 +14,10 @@ FFMPEG_LOCATION = SCRIPT_DIR if os.path.isfile(_local_ffmpeg) else None
 # Path where an uploaded cookies.txt will be stored
 COOKIES_FILE = os.path.join(SCRIPT_DIR, 'cookies.txt')
 
-# tv_embedded client bypasses YouTube bot-detection on server IPs without requiring cookies.
-# ios and web_creator are tried as fallbacks.
-_EXTRACTOR_ARGS = {'youtube': {'player_client': ['tv_embedded', 'ios', 'web_creator']}}
+# Use the 'web' client so the bgutil PO-token plugin can inject Proof-of-Origin tokens,
+# which YouTube requires for requests from datacenter IPs.
+# tv_embedded and ios are kept as fallbacks for when bgutil is unavailable.
+_EXTRACTOR_ARGS = {'youtube': {'player_client': ['web', 'tv_embedded', 'ios']}}
 
 QUALITY_FORMATS = {
     'best':  'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best',
